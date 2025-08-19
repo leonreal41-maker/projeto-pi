@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Campo Minado Pi Networker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f4ff;
+    }
+    h1 {
+      color: #4a2db6;
+    }
+    #board {
+      display: grid;
+      margin: 20px auto;
+      gap: 2px;
+      background: #4a2db6;
+      border: 3px solid #4a2db6;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .cell.revealed {
+      background: #dbe1ff;
+      cursor: default;
+    }
+    .cell.mine {
+      background: #ff4d4d;
+      color: white;
+    }
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #4a2db6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ Campo Minado Pi Networker ⚡</h1>
+  <div id="board"></div>
+  <div id="message"></div>
+  <button onclick="initGame()">Novo Jogo</button>
+
+  <script>
+    const size = 8; // tabuleiro 8x8
+    const mineCount = 10; 
+    let board = [];
+    let revealedCount = 0;
+
+    function initGame() {
+      const boardEl = document.getElementById("board");
+      const messageEl = document.getElementById("message");
+      boardEl.innerHTML = "";
+      messageEl.innerText = "";
+      revealedCount = 0;
+      board = [];
+
+      // gerar grid
+      boardEl.style.gridTemplateColumns = `repeat(${size}, 40px)`;
+      boardEl.style.gridTemplateRows = `repeat(${size}, 40px)`;
+
+      for (let i = 0; i < size; i++) {
+        board[i] = [];
+        for (let j = 0; j < size; j++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          cell.addEventListener("click", onClickCell);
+          boardEl.appendChild(cell);
+          board[i][j] = { mine: false, revealed: false, element: cell, count: 0 };
+        }
+      }
+
+      // posicionar minas
+      let minesPlaced = 0;
+      while (minesPlaced < mineCount) {
+        let r = Math.floor(Math.random() * size);
+        let c = Math.floor(Math.random() * size);
+        if (!board[r][c].mine) {
+          board[r][c].mine = true;
+          minesPlaced++;
+        }
+      }
+
+      // calcular vizinhos
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          if (!board[i][j].mine) {
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+              for (let dc = -1; dc <= 1; dc++) {
+                let nr = i + dr, nc = j + dc;
+                if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+                  if (board[nr][nc].mine) count++;
+                }
+              }
+            }
+            board[i][j].count = count;
+          }
+        }
+      }
+    }
+
+    function onClickCell(e) {
+      const row = e.target.dataset.row;
+      const col = e.target.dataset.col;
+      const cell = board[row][col];
+      if (cell.revealed) return;
+
+      cell.revealed = true;
+      cell.element.classList.add("revealed");
+
+      if (cell.mine) {
+        cell.element.classList.add("mine");
+        cell.element.innerText = "💣";
+        document.getElementById("message").innerText = "💥 Você encontrou um nó falso! Game Over!";
+        revealAll();
+        return;
+      }
+
+      cell.element.innerText = cell.count > 0 ? cell.count : "⛏️";
+      revealedCount++;
+
+      if (revealedCount === size * size - mineCount) {
+        document.getElementById("message").innerText = "🎉 Você minerou com sucesso no Campo Minado Pi Networker!";
+        revealAll();
+      }
+
+      if (cell.count === 0) {
+        revealNeighbors(row, col);
+      }
+    }
+
+    function revealNeighbors(row, col) {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          let nr = parseInt(row) + dr, nc = parseInt(col) + dc;
+          if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+            const neighbor = board[nr][nc];
+            if (!neighbor.revealed && !neighbor.mine) {
+              neighbor.revealed = true;
+              neighbor.element.classList.add("revealed");
+              neighbor.element.innerText = neighbor.count > 0 ? neighbor.count : "⛏️";
+              revealedCount++;
+              if (neighbor.count === 0) {
+                revealNeighbors(nr, nc);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function revealAll() {
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          const cell = board[i][j];
+          if (!cell.revealed) {
+            cell.revealed = true;
+            cell.element.classList.add("revealed");
+            if (cell.mine) {
+              cell.element.innerText = "💣";
+              cell.element.classList.add("mine");
+            } else {
+              cell.element.innerText = cell.count > 0 ? cell.count : "⛏️";
+            }
+          }
+        }
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
